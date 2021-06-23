@@ -119,7 +119,7 @@ __gather_os_info() {
     OS_VERSION=$(uname -r)
     # shellcheck disable=SC2034
     OS_VERSION_L=$( echo "$OS_VERSION" | tr '[:upper:]' '[:lower:]' )
-    IPADDR=$(ifconfig |grep broadcast |grep -E "192.168." |awk '{print $2}')
+    IPADDR=$(ip addr | grep global | awk -F '[ /]+' '{print $3}')
 }
 __gather_os_info
 
@@ -380,7 +380,7 @@ install_minion(){
 
     echoinfo "正在配置salt-minion"
     sed -i "s/#master: .*$/master: $SALT_MASTER/" /etc/salt/minion
-    sed -i "s/#id: .*$/id: $IPADDR/" /etc/salt/minion
+    sed -i "s/#id:$/id: $IPADDR/" /etc/salt/minion
 
     echoinfo "正在启动 Salt Minion"
     systemctl enable --now salt-minion || return 1
