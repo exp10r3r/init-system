@@ -12,7 +12,6 @@ __ScriptFullName="$0"
 __ScriptArgs="$#"
 
 BASE_DIR=$(cd "$(dirname "$0")";pwd)
-SALT_MASTER=192.168.64.19
 BS_TRUE=1
 BS_FALSE=0
 
@@ -355,6 +354,24 @@ install_jdk8(){
 
 install_minion(){
     echoinfo "正在安装 Slat Minion."
+    while :;do echo
+        read -p "请输入 Salt-master 的地址(Deafult: 192.168.64.19): " SALT_MASTER
+        SALT_MASTER=${SALT_MASTER:-"192.168.64.19"}
+        if [[ "$SALT_MASTER" =~ ^([1-9]{1,3})\.([1-9]{1,3})\.([1-9]{1,3})\.([1-9]{1,3})$ ]];then
+            flags=$(echo $SALT_MASTER | awk -F '.'  '$1<=255 && $2<=255 && $3<=255 && $4<=255 {print "yes"}')
+            if [[ ${flags:-no} == "yes" ]];then
+                break
+            else
+                echoerror "IP 地址不合法，请重新输入"
+                continue
+            fi
+        else
+            echoerror "IP 地址格式错误，请重新输入！"
+        fi
+    done
+    echo ""
+    echoinfo "当前配置的 Salt Master 地址为: [$SALT_MASTER]"
+
     echoinfo "正在添加 Salt YUM 仓库"
     __yum_install_noinput https://repo.saltstack.com/yum/redhat/salt-repo-latest.el7.noarch.rpm || return 1
 
@@ -362,8 +379,8 @@ install_minion(){
     __yum_install_noinput salt-minion || return 1
 
     echoinfo "正在配置salt-minion"
-    sed -i "s/#master: salt/master: $SALT_MASTER/" /etc/salt/minion
-    sed -i "s/#id:/id: $IPADDR/" /etc/salt/minion
+    sed -i "s/#master: .*$/master: $SALT_MASTER/" /etc/salt/minion
+    sed -i "s/#id: .*$/id: $IPADDR/" /etc/salt/minion
 
     echoinfo "正在启动 Salt Minion"
     systemctl enable --now salt-minion || return 1
@@ -389,16 +406,16 @@ do
 
     case $opt in
         1)
-            init_system_configuration || return 1
+            init_system_configuration
             ;;
         2)
-            install_node_exporter || return 1
+            install_node_exporter
             ;;
         3)
-            install_jdk8 || return 1
+            install_jdk8
             ;;
         4)
-            install_minion || return 1
+            install_minion
             ;;
         q)
             sleep 1
